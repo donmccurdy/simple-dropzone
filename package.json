@@ -1,0 +1,22 @@
+{
+  "name": "simple-dropzone",
+  "version": "1.0.0",
+  "description": "A simple multi-file drag-and-drop input using vanilla JavaScript.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "files",
+    "input",
+    "dropzone",
+    "drag",
+    "drop",
+    "upload"
+  ],
+  "author": "Don McCurdy <dm@donmccurdy.com>",
+  "license": "MIT",
+  "dependencies": {
+    "zipjs-browserify": "^1.0.1"
+  }
+}
