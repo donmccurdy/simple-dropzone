@@ -1,255 +1,213 @@
 (function(){function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s}return e})()({1:[function(require,module,exports){
-'use strict';
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-var EventEmitter = require('events');
-var zip = window.zip = require('zipjs-browserify');
+const zip = window.zip = require('zipjs-browserify');
 require('./lib/zip-fs');
 
-var RE_GLTF = /\.(gltf|glb)$/;
+const RE_GLTF = /\.(gltf|glb)$/;
 
 /**
  * Watches an element for file drops, parses to create a filemap hierarchy,
  * and emits the result.
  */
-
-var SimpleDropzone = function (_EventEmitter) {
-  _inherits(SimpleDropzone, _EventEmitter);
+class SimpleDropzone {
 
   /**
    * @param  {Element} el
    * @param  {Element} inputEl
    */
-  function SimpleDropzone(el, inputEl) {
-    _classCallCheck(this, SimpleDropzone);
+  constructor (el, inputEl) {
+    this.el = el;
+    this.inputEl = inputEl;
 
-    var _this = _possibleConstructorReturn(this, (SimpleDropzone.__proto__ || Object.getPrototypeOf(SimpleDropzone)).call(this));
+    this.listeners = {
+      drop: [],
+      dropstart: [],
+      droperror: []
+    };
 
-    _this.el = el;
-    _this.inputEl = inputEl;
+    this._onDragover = this._onDragover.bind(this);
+    this._onDrop = this._onDrop.bind(this);
+    this._onSelect = this._onSelect.bind(this);
 
-    _this._onDragover = _this._onDragover.bind(_this);
-    _this._onDrop = _this._onDrop.bind(_this);
-    _this._onSelect = _this._onSelect.bind(_this);
+    el.addEventListener('dragover', this._onDragover, false);
+    el.addEventListener('drop', this._onDrop, false);
+    inputEl.addEventListener('change', this._onSelect);
+  }
 
-    el.addEventListener('dragover', _this._onDragover, false);
-    el.addEventListener('drop', _this._onDrop, false);
-    inputEl.addEventListener('change', _this._onSelect);
-    return _this;
+  /**
+   * @param  {string}   type
+   * @param  {Function} callback
+   * @return {SimpleDropzone}
+   */
+  on (type, callback) {
+    this.listeners[type].push(callback);
+    return this;
+  }
+
+  /**
+   * @param  {string} type
+   * @param  {Object} data
+   * @return {SimpleDropzone}
+   */
+  _emit (type, data) {
+    this.listeners[type]
+      .forEach((callback) => callback(data));
+    return this;
   }
 
   /**
    * Destroys the instance.
    */
+  destroy () {
+    const el = this.el;
+    const inputEl = this.inputEl;
 
+    el.removeEventListener(this._onDragover);
+    el.removeEventListener(this._onDrop);
+    inputEl.removeEventListener(this._onSelect);
 
-  _createClass(SimpleDropzone, [{
-    key: 'destroy',
-    value: function destroy() {
-      var el = this.el;
-      var inputEl = this.inputEl;
+    delete this.el;
+    delete this.inputEl;
+    delete this.listeners;
+  }
 
-      el.removeEventListener(this._onDragover);
-      el.removeEventListener(this._onDrop);
-      inputEl.removeEventListener(this._onSelect);
+  /**
+   * @param  {Event} e
+   */
+  _onDrop (e) {
+    e.stopPropagation();
+    e.preventDefault();
 
-      this.removeAllListeners();
+    this._emit('dropstart');
 
-      delete this.el;
-      delete this.inputEl;
-    }
-
-    /**
-     * @param  {Event} e
-     */
-
-  }, {
-    key: '_onDrop',
-    value: function _onDrop(e) {
-      var _this2 = this;
-
-      e.stopPropagation();
-      e.preventDefault();
-
-      this.emit('dropstart');
-
-      var entries = void 0;
-      if (e.dataTransfer.items) {
-        entries = [].slice.call(e.dataTransfer.items).map(function (item) {
-          return item.webkitGetAsEntry();
-        });
-      } else if ((e.dataTransfer.files || []).length === 1) {
-        var file = e.dataTransfer.files[0];
-        if (file.type === 'application/zip') {
-          this._loadZip(file);
-          return;
-        } else {
-          this._emitResult(new Map([[file.name, file]]));
-          return;
-        }
-      }
-
-      if (!entries) {
-        this._fail('Required drag-and-drop APIs are not supported in this browser.');
-      }
-
-      if (entries.length === 1 && entries[0].name.match(/\.zip$/)) {
-        entries[0].file(function (file) {
-          return _this2._loadZip(file);
-        });
+    let entries;
+    if (e.dataTransfer.items) {
+      entries = [].slice.call(e.dataTransfer.items)
+        .map((item) => item.webkitGetAsEntry());
+    } else if ((e.dataTransfer.files||[]).length === 1) {
+      const file = e.dataTransfer.files[0];
+      if (file.type === 'application/zip') {
+        this._loadZip(file);
+        return;
       } else {
-        this._loadNextEntry(new Map(), entries);
-      }
-    }
-
-    /**
-     * @param  {Event} e
-     */
-
-  }, {
-    key: '_onDragover',
-    value: function _onDragover(e) {
-      e.stopPropagation();
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy.
-    }
-
-    /**
-     * @param  {Event} e
-     */
-
-  }, {
-    key: '_onSelect',
-    value: function _onSelect(e) {
-      // HTML file inputs do not seem to support folders, so assume this is a flat file list.
-      var files = [].slice.call(this.inputEl.files);
-      var fileMap = new Map();
-      files.forEach(function (file) {
-        return fileMap.set(file.name, file);
-      });
-      this._emitResult(fileMap);
-    }
-
-    /**
-     * Iterates through a list of FileSystemEntry objects, creates the fileMap
-     * tree, and emits the result.
-     * @param  {Map<string, File>} fileMap
-     * @param  {Array<FileSystemEntry>} entries
-     */
-
-  }, {
-    key: '_loadNextEntry',
-    value: function _loadNextEntry(fileMap, entries) {
-      var _this3 = this;
-
-      var entry = entries.pop();
-
-      if (!entry) {
-        this._emitResult(fileMap);
+        this._emit('drop', {files: new Map([[file.name, file]])});
         return;
       }
-
-      if (entry.isFile) {
-        entry.file(function (file) {
-          fileMap.set(entry.fullPath, file);
-          _this3._loadNextEntry(fileMap, entries);
-        }, function () {
-          return console.error('Could not load file: %s', entry.fullPath);
-        });
-      } else if (entry.isDirectory) {
-        // readEntries() must be called repeatedly until it stops returning results.
-        // https://www.w3.org/TR/2012/WD-file-system-api-20120417/#the-directoryreader-interface
-        // https://bugs.chromium.org/p/chromium/issues/detail?id=378883
-        var reader = entry.createReader();
-        var readerCallback = function readerCallback(newEntries) {
-          if (newEntries.length) {
-            entries = entries.concat(newEntries);
-            reader.readEntries(readerCallback);
-          } else {
-            _this3._loadNextEntry(fileMap, entries);
-          }
-        };
-        reader.readEntries(readerCallback);
-      } else {
-        console.warn('Unknown asset type: ' + entry.fullPath);
-        this._loadNextEntry(fileMap, entries);
-      }
     }
 
-    /**
-     * Inflates a File in .ZIP format, creates the fileMap tree, and emits the
-     * result.
-     * @param  {File} file
-     */
+    if (!entries) {
+      this._fail('Required drag-and-drop APIs are not supported in this browser.');
+    }
 
-  }, {
-    key: '_loadZip',
-    value: function _loadZip(file) {
-      var _this4 = this;
+    if (entries.length === 1 && entries[0].name.match(/\.zip$/)) {
+      entries[0].file((file) => this._loadZip(file));
+    } else {
+      this._loadNextEntry(new Map(), entries);
+    }
+  }
 
-      var pending = [];
-      var fileMap = new Map();
-      var archive = new zip.fs.FS();
+  /**
+   * @param  {Event} e
+   */
+  _onDragover (e) {
+    e.stopPropagation();
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy.
+  }
 
-      var traverse = function traverse(node) {
-        if (node.directory) {
-          node.children.forEach(traverse);
-        } else if (node.name[0] !== '.') {
-          pending.push(new Promise(function (resolve) {
-            node.getData(new zip.BlobWriter(), function (blob) {
-              blob.name = node.name;
-              fileMap.set(node.getFullname(), blob);
-              resolve();
-            });
-          }));
+  /**
+   * @param  {Event} e
+   */
+  _onSelect (e) {
+    // HTML file inputs do not seem to support folders, so assume this is a flat file list.
+    const files = [].slice.call(this.inputEl.files);
+    const fileMap = new Map();
+    files.forEach((file) => fileMap.set(file.name, file));
+    this._emit('drop', {files: fileMap});
+  }
+
+  /**
+   * Iterates through a list of FileSystemEntry objects, creates the fileMap
+   * tree, and emits the result.
+   * @param  {Map<string, File>} fileMap
+   * @param  {Array<FileSystemEntry>} entries
+   */
+  _loadNextEntry (fileMap, entries) {
+    const entry = entries.pop();
+
+    if (!entry) {
+      this._emit('drop', {files: fileMap});
+      return;
+    }
+
+    if (entry.isFile) {
+      entry.file((file) => {
+        fileMap.set(entry.fullPath, file);
+        this._loadNextEntry(fileMap, entries);
+      }, () => console.error('Could not load file: %s', entry.fullPath));
+    } else if (entry.isDirectory) {
+      // readEntries() must be called repeatedly until it stops returning results.
+      // https://www.w3.org/TR/2012/WD-file-system-api-20120417/#the-directoryreader-interface
+      // https://bugs.chromium.org/p/chromium/issues/detail?id=378883
+      const reader = entry.createReader();
+      const readerCallback = (newEntries) => {
+        if (newEntries.length) {
+          entries = entries.concat(newEntries);
+          reader.readEntries(readerCallback);
+        } else {
+          this._loadNextEntry(fileMap, entries);
         }
       };
+      reader.readEntries(readerCallback);
+    } else {
+      console.warn('Unknown asset type: ' + entry.fullPath);
+      this._loadNextEntry(fileMap, entries);
+    }
+  }
 
-      archive.importBlob(file, function () {
-        traverse(archive.root);
-        Promise.all(pending).then(function () {
-          _this4._emitResult(fileMap);
-        });
+  /**
+   * Inflates a File in .ZIP format, creates the fileMap tree, and emits the
+   * result.
+   * @param  {File} file
+   */
+  _loadZip (file) {
+    const pending = [];
+    const fileMap = new Map();
+    const archive = new zip.fs.FS();
+
+    const traverse = (node) => {
+      if (node.directory) {
+        node.children.forEach(traverse);
+      } else if (node.name[0] !== '.') {
+        pending.push(new Promise((resolve) => {
+          node.getData(new zip.BlobWriter(), (blob) => {
+            blob.name = node.name;
+            fileMap.set(node.getFullname(), blob);
+            resolve();
+          });
+        }));
+      }
+    };
+
+    archive.importBlob(file, () => {
+      traverse(archive.root);
+      Promise.all(pending).then(() => {
+        this._emit('drop', {files: fileMap});
       });
-    }
+    });
+  }
 
-    /**
-     * @param {Map<string, File>} fileMap
-     */
-
-  }, {
-    key: '_emitResult',
-    value: function _emitResult(files) {
-      this.emit('drop', { files: files });
-    }
-
-    /**
-     * @param {string} message
-     * @throws
-     */
-
-  }, {
-    key: '_fail',
-    value: function _fail(message) {
-      this.emit('droperror', { message: message });
-    }
-  }]);
-
-  return SimpleDropzone;
-}(EventEmitter);
+  /**
+   * @param {string} message
+   * @throws
+   */
+  _fail (message) {
+    this._emit('droperror', {message: message});
+  }
+}
 
 module.exports = SimpleDropzone;
 
-},{"./lib/zip-fs":2,"events":3,"zipjs-browserify":4}],2:[function(require,module,exports){
-"use strict";
-
+},{"./lib/zip-fs":2,"zipjs-browserify":3}],2:[function(require,module,exports){
 /*
  Copyright (c) 2013 Gildas Lormeau. All rights reserved.
 
@@ -278,32 +236,23 @@ module.exports = SimpleDropzone;
  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-(function () {
+(function() {
   "use strict";
 
   var CHUNK_SIZE = 512 * 1024;
 
-  var TextWriter = zip.TextWriter,
-      //
-  BlobWriter = zip.BlobWriter,
-      //
-  Data64URIWriter = zip.Data64URIWriter,
-      //
-  Reader = zip.Reader,
-      //
-  TextReader = zip.TextReader,
-      //
-  BlobReader = zip.BlobReader,
-      //
-  Data64URIReader = zip.Data64URIReader,
-      //
-  createReader = zip.createReader,
-      //
+  var TextWriter = zip.TextWriter, //
+  BlobWriter = zip.BlobWriter, //
+  Data64URIWriter = zip.Data64URIWriter, //
+  Reader = zip.Reader, //
+  TextReader = zip.TextReader, //
+  BlobReader = zip.BlobReader, //
+  Data64URIReader = zip.Data64URIReader, //
+  createReader = zip.createReader, //
   createWriter = zip.createWriter;
 
   function ZipBlobReader(entry) {
-    var that = this,
-        blobReader;
+    var that = this, blobReader;
 
     function init(callback) {
       that.size = entry.uncompressedSize;
@@ -311,15 +260,18 @@ module.exports = SimpleDropzone;
     }
 
     function getData(callback) {
-      if (that.data) callback();else entry.getData(new BlobWriter(), function (data) {
-        that.data = data;
-        blobReader = new BlobReader(data);
+      if (that.data)
         callback();
-      }, null, that.checkCrc32);
+      else
+        entry.getData(new BlobWriter(), function(data) {
+          that.data = data;
+          blobReader = new BlobReader(data);
+          callback();
+        }, null, that.checkCrc32);
     }
 
     function readUint8Array(index, length, callback, onerror) {
-      getData(function () {
+      getData(function() {
         blobReader.readUint8Array(index, length, callback, onerror);
       }, onerror);
     }
@@ -349,26 +301,35 @@ module.exports = SimpleDropzone;
 
     function next() {
       index++;
-      if (index < entry.children.length) process(entry.children[index]);else onend();
+      if (index < entry.children.length)
+        process(entry.children[index]);
+      else
+        onend();
     }
 
     function process(child) {
-      if (child.directory) initReaders(child, next, onerror);else {
+      if (child.directory)
+        initReaders(child, next, onerror);
+      else {
         child.reader = new child.Reader(child.data, onerror);
-        child.reader.init(function () {
+        child.reader.init(function() {
           child.uncompressedSize = child.reader.size;
           next();
         });
       }
     }
 
-    if (entry.children.length) process(entry.children[index]);else onend();
+    if (entry.children.length)
+      process(entry.children[index]);
+    else
+      onend();
   }
 
   function detach(entry) {
     var children = entry.parent.children;
-    children.forEach(function (child, index) {
-      if (child.id == entry.id) children.splice(index, 1);
+    children.forEach(function(child, index) {
+      if (child.id == entry.id)
+        children.splice(index, 1);
     });
   }
 
@@ -380,18 +341,22 @@ module.exports = SimpleDropzone;
 
       function exportChild() {
         var child = entry.children[childIndex];
-        if (child) zipWriter.add(child.getFullname(), child.reader, function () {
-          currentIndex += child.uncompressedSize || 0;
-          process(zipWriter, child, function () {
-            childIndex++;
-            exportChild();
-          }, onprogress, totalSize);
-        }, function (index) {
-          if (onprogress) onprogress(currentIndex + index, totalSize);
-        }, {
-          directory: child.directory,
-          version: child.zipVersion
-        });else onend();
+        if (child)
+          zipWriter.add(child.getFullname(), child.reader, function() {
+            currentIndex += child.uncompressedSize || 0;
+            process(zipWriter, child, function() {
+              childIndex++;
+              exportChild();
+            }, onprogress, totalSize);
+          }, function(index) {
+            if (onprogress)
+              onprogress(currentIndex + index, totalSize);
+          }, {
+            directory : child.directory,
+            version : child.zipVersion
+          });
+        else
+          onend();
       }
 
       exportChild();
@@ -402,46 +367,56 @@ module.exports = SimpleDropzone;
 
   function addFileEntry(zipEntry, fileEntry, onend, onerror) {
     function getChildren(fileEntry, callback) {
-      if (fileEntry.isDirectory) fileEntry.createReader().readEntries(callback);
-      if (fileEntry.isFile) callback([]);
+      if (fileEntry.isDirectory)
+        fileEntry.createReader().readEntries(callback);
+      if (fileEntry.isFile)
+        callback([]);
     }
 
     function process(zipEntry, fileEntry, onend) {
-      getChildren(fileEntry, function (children) {
+      getChildren(fileEntry, function(children) {
         var childIndex = 0;
 
         function addChild(child) {
           function nextChild(childFileEntry) {
-            process(childFileEntry, child, function () {
+            process(childFileEntry, child, function() {
               childIndex++;
               processChild();
             });
           }
 
-          if (child.isDirectory) nextChild(zipEntry.addDirectory(child.name));
-          if (child.isFile) child.file(function (file) {
-            var childZipEntry = zipEntry.addBlob(child.name, file);
-            childZipEntry.uncompressedSize = file.size;
-            nextChild(childZipEntry);
-          }, onerror);
+          if (child.isDirectory)
+            nextChild(zipEntry.addDirectory(child.name));
+          if (child.isFile)
+            child.file(function(file) {
+              var childZipEntry = zipEntry.addBlob(child.name, file);
+              childZipEntry.uncompressedSize = file.size;
+              nextChild(childZipEntry);
+            }, onerror);
         }
 
         function processChild() {
           var child = children[childIndex];
-          if (child) addChild(child);else onend();
+          if (child)
+            addChild(child);
+          else
+            onend();
         }
 
         processChild();
       });
     }
 
-    if (fileEntry.isDirectory) process(zipEntry, fileEntry, onend);else fileEntry.file(function (file) {
-      zipEntry.addBlob(fileEntry.name, file);
-      onend();
-    }, onerror);
+    if (fileEntry.isDirectory)
+      process(zipEntry, fileEntry, onend);
+    else
+      fileEntry.file(function(file) {
+        zipEntry.addBlob(fileEntry.name, file);
+        onend();
+      }, onerror);
   }
 
-  function _getFileEntry(fileEntry, entry, onend, onprogress, onerror, totalSize, checkCrc32) {
+  function getFileEntry(fileEntry, entry, onend, onprogress, onerror, totalSize, checkCrc32) {
     var currentIndex = 0;
 
     function process(fileEntry, entry, onend, onprogress, onerror, totalSize) {
@@ -450,32 +425,42 @@ module.exports = SimpleDropzone;
       function addChild(child) {
         function nextChild(childFileEntry) {
           currentIndex += child.uncompressedSize || 0;
-          process(childFileEntry, child, function () {
+          process(childFileEntry, child, function() {
             childIndex++;
             processChild();
           }, onprogress, onerror, totalSize);
         }
 
-        if (child.directory) fileEntry.getDirectory(child.name, {
-          create: true
-        }, nextChild, onerror);else fileEntry.getFile(child.name, {
-          create: true
-        }, function (file) {
-          child.getData(new zip.FileWriter(file, zip.getMimeType(child.name)), nextChild, function (index) {
-            if (onprogress) onprogress(currentIndex + index, totalSize);
-          }, checkCrc32);
-        }, onerror);
+        if (child.directory)
+          fileEntry.getDirectory(child.name, {
+            create : true
+          }, nextChild, onerror);
+        else
+          fileEntry.getFile(child.name, {
+            create : true
+          }, function(file) {
+            child.getData(new zip.FileWriter(file, zip.getMimeType(child.name)), nextChild, function(index) {
+              if (onprogress)
+                onprogress(currentIndex + index, totalSize);
+            }, checkCrc32);
+          }, onerror);
       }
 
       function processChild() {
         var child = entry.children[childIndex];
-        if (child) addChild(child);else onend();
+        if (child)
+          addChild(child);
+        else
+          onend();
       }
 
       processChild();
     }
 
-    if (entry.directory) process(fileEntry, entry, onend, onprogress, onerror, totalSize);else entry.getData(new zip.FileWriter(fileEntry, zip.getMimeType(entry.name)), onend, onprogress, checkCrc32);
+    if (entry.directory)
+      process(fileEntry, entry, onend, onprogress, onerror, totalSize);
+    else
+      entry.getData(new zip.FileWriter(fileEntry, zip.getMimeType(entry.name)), onend, onprogress, checkCrc32);
   }
 
   function resetFS(fs) {
@@ -488,29 +473,39 @@ module.exports = SimpleDropzone;
 
     function stepCopy() {
       var index = chunkIndex * CHUNK_SIZE;
-      if (onprogress) onprogress(index, reader.size);
-      if (index < reader.size) reader.readUint8Array(index, Math.min(CHUNK_SIZE, reader.size - index), function (array) {
-        writer.writeUint8Array(new Uint8Array(array), function () {
-          chunkIndex++;
-          stepCopy();
-        });
-      }, onerror);else writer.getData(onend);
+      if (onprogress)
+        onprogress(index, reader.size);
+      if (index < reader.size)
+        reader.readUint8Array(index, Math.min(CHUNK_SIZE, reader.size - index), function(array) {
+          writer.writeUint8Array(new Uint8Array(array), function() {
+            chunkIndex++;
+            stepCopy();
+          });
+        }, onerror);
+      else
+        writer.getData(onend);
     }
 
     stepCopy();
   }
 
   function addChild(parent, name, params, directory) {
-    if (parent.directory) return directory ? new ZipDirectoryEntry(parent.fs, name, params, parent) : new ZipFileEntry(parent.fs, name, params, parent);else throw "Parent entry is not a directory.";
+    if (parent.directory)
+      return directory ? new ZipDirectoryEntry(parent.fs, name, params, parent) : new ZipFileEntry(parent.fs, name, params, parent);
+    else
+      throw "Parent entry is not a directory.";
   }
 
-  function ZipEntry() {}
+  function ZipEntry() {
+  }
 
   ZipEntry.prototype = {
-    init: function init(fs, name, params, parent) {
+    init : function(fs, name, params, parent) {
       var that = this;
-      if (fs.root && parent && parent.getChildByName(name)) throw "Entry filename already exists.";
-      if (!params) params = {};
+      if (fs.root && parent && parent.getChildByName(name))
+        throw "Entry filename already exists.";
+      if (!params)
+        params = {};
       that.fs = fs;
       that.name = name;
       that.id = fs.entries.length;
@@ -519,42 +514,44 @@ module.exports = SimpleDropzone;
       that.zipVersion = params.zipVersion || 0x14;
       that.uncompressedSize = 0;
       fs.entries.push(that);
-      if (parent) that.parent.children.push(that);
+      if (parent)
+        that.parent.children.push(that);
     },
-    getFileEntry: function getFileEntry(fileEntry, onend, onprogress, onerror, checkCrc32) {
+    getFileEntry : function(fileEntry, onend, onprogress, onerror, checkCrc32) {
       var that = this;
-      initReaders(that, function () {
-        _getFileEntry(fileEntry, that, onend, onprogress, onerror, getTotalSize(that), checkCrc32);
+      initReaders(that, function() {
+        getFileEntry(fileEntry, that, onend, onprogress, onerror, getTotalSize(that), checkCrc32);
       }, onerror);
     },
-    moveTo: function moveTo(target) {
+    moveTo : function(target) {
       var that = this;
       if (target.directory) {
         if (!target.isDescendantOf(that)) {
           if (that != target) {
-            if (target.getChildByName(that.name)) throw "Entry filename already exists.";
+            if (target.getChildByName(that.name))
+              throw "Entry filename already exists.";
             detach(that);
             that.parent = target;
             target.children.push(that);
           }
-        } else throw "Entry is a ancestor of target entry.";
-      } else throw "Target entry is not a directory.";
+        } else
+          throw "Entry is a ancestor of target entry.";
+      } else
+        throw "Target entry is not a directory.";
     },
-    getFullname: function getFullname() {
-      var that = this,
-          fullname = that.name,
-          entry = that.parent;
+    getFullname : function() {
+      var that = this, fullname = that.name, entry = that.parent;
       while (entry) {
         fullname = (entry.name ? entry.name + "/" : "") + fullname;
         entry = entry.parent;
       }
       return fullname;
     },
-    isDescendantOf: function isDescendantOf(ancestor) {
+    isDescendantOf : function(ancestor) {
       var entry = this.parent;
-      while (entry && entry.id != ancestor.id) {
+      while (entry && entry.id != ancestor.id)
         entry = entry.parent;
-      }return !!entry;
+      return !!entry;
     }
   };
   ZipEntry.prototype.constructor = ZipEntry;
@@ -574,25 +571,28 @@ module.exports = SimpleDropzone;
 
   ZipFileEntry.prototype = ZipFileEntryProto = new ZipEntry();
   ZipFileEntryProto.constructor = ZipFileEntry;
-  ZipFileEntryProto.getData = function (writer, onend, onprogress, onerror) {
+  ZipFileEntryProto.getData = function(writer, onend, onprogress, onerror) {
     var that = this;
-    if (!writer || writer.constructor == that.Writer && that.data) onend(that.data);else {
-      if (!that.reader) that.reader = new that.Reader(that.data, onerror);
-      that.reader.init(function () {
-        writer.init(function () {
+    if (!writer || (writer.constructor == that.Writer && that.data))
+      onend(that.data);
+    else {
+      if (!that.reader)
+        that.reader = new that.Reader(that.data, onerror);
+      that.reader.init(function() {
+        writer.init(function() {
           bufferedCopy(that.reader, writer, onend, onprogress, onerror);
         }, onerror);
       });
     }
   };
 
-  ZipFileEntryProto.getText = function (onend, onprogress, checkCrc32, encoding) {
+  ZipFileEntryProto.getText = function(onend, onprogress, checkCrc32, encoding) {
     this.getData(new TextWriter(encoding), onend, onprogress, checkCrc32);
   };
-  ZipFileEntryProto.getBlob = function (mimeType, onend, onprogress, checkCrc32) {
+  ZipFileEntryProto.getBlob = function(mimeType, onend, onprogress, checkCrc32) {
     this.getData(new BlobWriter(mimeType), onend, onprogress, checkCrc32);
   };
-  ZipFileEntryProto.getData64URI = function (mimeType, onend, onprogress, checkCrc32) {
+  ZipFileEntryProto.getData64URI = function(mimeType, onend, onprogress, checkCrc32) {
     this.getData(new Data64URIWriter(mimeType), onend, onprogress, checkCrc32);
   };
 
@@ -606,94 +606,92 @@ module.exports = SimpleDropzone;
 
   ZipDirectoryEntry.prototype = ZipDirectoryEntryProto = new ZipEntry();
   ZipDirectoryEntryProto.constructor = ZipDirectoryEntry;
-  ZipDirectoryEntryProto.addDirectory = function (name) {
+  ZipDirectoryEntryProto.addDirectory = function(name) {
     return addChild(this, name, null, true);
   };
-  ZipDirectoryEntryProto.addText = function (name, text) {
+  ZipDirectoryEntryProto.addText = function(name, text) {
     return addChild(this, name, {
-      data: text,
-      Reader: TextReader,
-      Writer: TextWriter
+      data : text,
+      Reader : TextReader,
+      Writer : TextWriter
     });
   };
-  ZipDirectoryEntryProto.addBlob = function (name, blob) {
+  ZipDirectoryEntryProto.addBlob = function(name, blob) {
     return addChild(this, name, {
-      data: blob,
-      Reader: BlobReader,
-      Writer: BlobWriter
+      data : blob,
+      Reader : BlobReader,
+      Writer : BlobWriter
     });
   };
-  ZipDirectoryEntryProto.addData64URI = function (name, dataURI) {
+  ZipDirectoryEntryProto.addData64URI = function(name, dataURI) {
     return addChild(this, name, {
-      data: dataURI,
-      Reader: Data64URIReader,
-      Writer: Data64URIWriter
+      data : dataURI,
+      Reader : Data64URIReader,
+      Writer : Data64URIWriter
     });
   };
-  ZipDirectoryEntryProto.addFileEntry = function (fileEntry, onend, onerror) {
+  ZipDirectoryEntryProto.addFileEntry = function(fileEntry, onend, onerror) {
     addFileEntry(this, fileEntry, onend, onerror);
   };
-  ZipDirectoryEntryProto.addData = function (name, params) {
+  ZipDirectoryEntryProto.addData = function(name, params) {
     return addChild(this, name, params);
   };
-  ZipDirectoryEntryProto.importBlob = function (blob, onend, onerror) {
+  ZipDirectoryEntryProto.importBlob = function(blob, onend, onerror) {
     this.importZip(new BlobReader(blob), onend, onerror);
   };
-  ZipDirectoryEntryProto.importText = function (text, onend, onerror) {
+  ZipDirectoryEntryProto.importText = function(text, onend, onerror) {
     this.importZip(new TextReader(text), onend, onerror);
   };
-  ZipDirectoryEntryProto.importData64URI = function (dataURI, onend, onerror) {
+  ZipDirectoryEntryProto.importData64URI = function(dataURI, onend, onerror) {
     this.importZip(new Data64URIReader(dataURI), onend, onerror);
   };
-  ZipDirectoryEntryProto.exportBlob = function (onend, onprogress, onerror) {
+  ZipDirectoryEntryProto.exportBlob = function(onend, onprogress, onerror) {
     this.exportZip(new BlobWriter("application/zip"), onend, onprogress, onerror);
   };
-  ZipDirectoryEntryProto.exportText = function (onend, onprogress, onerror) {
+  ZipDirectoryEntryProto.exportText = function(onend, onprogress, onerror) {
     this.exportZip(new TextWriter(), onend, onprogress, onerror);
   };
-  ZipDirectoryEntryProto.exportFileEntry = function (fileEntry, onend, onprogress, onerror) {
+  ZipDirectoryEntryProto.exportFileEntry = function(fileEntry, onend, onprogress, onerror) {
     this.exportZip(new zip.FileWriter(fileEntry, "application/zip"), onend, onprogress, onerror);
   };
-  ZipDirectoryEntryProto.exportData64URI = function (onend, onprogress, onerror) {
+  ZipDirectoryEntryProto.exportData64URI = function(onend, onprogress, onerror) {
     this.exportZip(new Data64URIWriter("application/zip"), onend, onprogress, onerror);
   };
-  ZipDirectoryEntryProto.importZip = function (reader, onend, onerror) {
+  ZipDirectoryEntryProto.importZip = function(reader, onend, onerror) {
     var that = this;
-    createReader(reader, function (zipReader) {
-      zipReader.getEntries(function (entries) {
-        entries.forEach(function (entry) {
-          var parent = that,
-              path = entry.filename.split("/"),
-              name = path.pop();
-          path.forEach(function (pathPart) {
+    createReader(reader, function(zipReader) {
+      zipReader.getEntries(function(entries) {
+        entries.forEach(function(entry) {
+          var parent = that, path = entry.filename.split("/"), name = path.pop();
+          path.forEach(function(pathPart) {
             parent = parent.getChildByName(pathPart) || new ZipDirectoryEntry(that.fs, pathPart, null, parent);
           });
-          if (!entry.directory) addChild(parent, name, {
-            data: entry,
-            Reader: ZipBlobReader
-          });
+          if (!entry.directory)
+            addChild(parent, name, {
+              data : entry,
+              Reader : ZipBlobReader
+            });
         });
         onend();
       });
     }, onerror);
   };
-  ZipDirectoryEntryProto.exportZip = function (writer, onend, onprogress, onerror) {
+  ZipDirectoryEntryProto.exportZip = function(writer, onend, onprogress, onerror) {
     var that = this;
-    initReaders(that, function () {
-      createWriter(writer, function (zipWriter) {
-        exportZip(zipWriter, that, function () {
+    initReaders(that, function() {
+      createWriter(writer, function(zipWriter) {
+        exportZip(zipWriter, that, function() {
           zipWriter.close(onend);
         }, onprogress, getTotalSize(that));
       }, onerror);
     }, onerror);
   };
-  ZipDirectoryEntryProto.getChildByName = function (name) {
-    var childIndex,
-        child,
-        that = this;
+  ZipDirectoryEntryProto.getChildByName = function(name) {
+    var childIndex, child, that = this;
     for (childIndex = 0; childIndex < that.children.length; childIndex++) {
       child = that.children[childIndex];
-      if (child.name == name) return child;
+      if (child.name == name)
+        return child;
     }
   };
 
@@ -701,580 +699,58 @@ module.exports = SimpleDropzone;
     resetFS(this);
   }
   FS.prototype = {
-    remove: function remove(entry) {
+    remove : function(entry) {
       detach(entry);
       this.entries[entry.id] = null;
     },
-    find: function find(fullname) {
-      var index,
-          path = fullname.split("/"),
-          node = this.root;
-      for (index = 0; node && index < path.length; index++) {
+    find : function(fullname) {
+      var index, path = fullname.split("/"), node = this.root;
+      for (index = 0; node && index < path.length; index++)
         node = node.getChildByName(path[index]);
-      }return node;
+      return node;
     },
-    getById: function getById(id) {
+    getById : function(id) {
       return this.entries[id];
     },
-    importBlob: function importBlob(blob, onend, onerror) {
+    importBlob : function(blob, onend, onerror) {
       resetFS(this);
       this.root.importBlob(blob, onend, onerror);
     },
-    importText: function importText(text, onend, onerror) {
+    importText : function(text, onend, onerror) {
       resetFS(this);
       this.root.importText(text, onend, onerror);
     },
-    importData64URI: function importData64URI(dataURI, onend, onerror) {
+    importData64URI : function(dataURI, onend, onerror) {
       resetFS(this);
       this.root.importData64URI(dataURI, onend, onerror);
     },
-    exportBlob: function exportBlob(onend, onprogress, onerror) {
+    exportBlob : function(onend, onprogress, onerror) {
       this.root.exportBlob(onend, onprogress, onerror);
     },
-    exportText: function exportText(onend, onprogress, onerror) {
+    exportText : function(onend, onprogress, onerror) {
       this.root.exportText(onend, onprogress, onerror);
     },
-    exportFileEntry: function exportFileEntry(fileEntry, onend, onprogress, onerror) {
+    exportFileEntry : function(fileEntry, onend, onprogress, onerror) {
       this.root.exportFileEntry(fileEntry, onend, onprogress, onerror);
     },
-    exportData64URI: function exportData64URI(onend, onprogress, onerror) {
+    exportData64URI : function(onend, onprogress, onerror) {
       this.root.exportData64URI(onend, onprogress, onerror);
     }
   };
 
   zip.fs = {
-    FS: FS,
-    ZipDirectoryEntry: ZipDirectoryEntry,
-    ZipFileEntry: ZipFileEntry
+    FS : FS,
+    ZipDirectoryEntry : ZipDirectoryEntry,
+    ZipFileEntry : ZipFileEntry
   };
 
-  zip.getMimeType = function () {
+  zip.getMimeType = function() {
     return "application/octet-stream";
   };
+
 })();
 
 },{}],3:[function(require,module,exports){
-// Copyright Joyent, Inc. and other Node contributors.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the
-// "Software"), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to permit
-// persons to whom the Software is furnished to do so, subject to the
-// following conditions:
-//
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-// USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-var objectCreate = Object.create || objectCreatePolyfill
-var objectKeys = Object.keys || objectKeysPolyfill
-var bind = Function.prototype.bind || functionBindPolyfill
-
-function EventEmitter() {
-  if (!this._events || !Object.prototype.hasOwnProperty.call(this, '_events')) {
-    this._events = objectCreate(null);
-    this._eventsCount = 0;
-  }
-
-  this._maxListeners = this._maxListeners || undefined;
-}
-module.exports = EventEmitter;
-
-// Backwards-compat with node 0.10.x
-EventEmitter.EventEmitter = EventEmitter;
-
-EventEmitter.prototype._events = undefined;
-EventEmitter.prototype._maxListeners = undefined;
-
-// By default EventEmitters will print a warning if more than 10 listeners are
-// added to it. This is a useful default which helps finding memory leaks.
-var defaultMaxListeners = 10;
-
-var hasDefineProperty;
-try {
-  var o = {};
-  if (Object.defineProperty) Object.defineProperty(o, 'x', { value: 0 });
-  hasDefineProperty = o.x === 0;
-} catch (err) { hasDefineProperty = false }
-if (hasDefineProperty) {
-  Object.defineProperty(EventEmitter, 'defaultMaxListeners', {
-    enumerable: true,
-    get: function() {
-      return defaultMaxListeners;
-    },
-    set: function(arg) {
-      // check whether the input is a positive number (whose value is zero or
-      // greater and not a NaN).
-      if (typeof arg !== 'number' || arg < 0 || arg !== arg)
-        throw new TypeError('"defaultMaxListeners" must be a positive number');
-      defaultMaxListeners = arg;
-    }
-  });
-} else {
-  EventEmitter.defaultMaxListeners = defaultMaxListeners;
-}
-
-// Obviously not all Emitters should be limited to 10. This function allows
-// that to be increased. Set to zero for unlimited.
-EventEmitter.prototype.setMaxListeners = function setMaxListeners(n) {
-  if (typeof n !== 'number' || n < 0 || isNaN(n))
-    throw new TypeError('"n" argument must be a positive number');
-  this._maxListeners = n;
-  return this;
-};
-
-function $getMaxListeners(that) {
-  if (that._maxListeners === undefined)
-    return EventEmitter.defaultMaxListeners;
-  return that._maxListeners;
-}
-
-EventEmitter.prototype.getMaxListeners = function getMaxListeners() {
-  return $getMaxListeners(this);
-};
-
-// These standalone emit* functions are used to optimize calling of event
-// handlers for fast cases because emit() itself often has a variable number of
-// arguments and can be deoptimized because of that. These functions always have
-// the same number of arguments and thus do not get deoptimized, so the code
-// inside them can execute faster.
-function emitNone(handler, isFn, self) {
-  if (isFn)
-    handler.call(self);
-  else {
-    var len = handler.length;
-    var listeners = arrayClone(handler, len);
-    for (var i = 0; i < len; ++i)
-      listeners[i].call(self);
-  }
-}
-function emitOne(handler, isFn, self, arg1) {
-  if (isFn)
-    handler.call(self, arg1);
-  else {
-    var len = handler.length;
-    var listeners = arrayClone(handler, len);
-    for (var i = 0; i < len; ++i)
-      listeners[i].call(self, arg1);
-  }
-}
-function emitTwo(handler, isFn, self, arg1, arg2) {
-  if (isFn)
-    handler.call(self, arg1, arg2);
-  else {
-    var len = handler.length;
-    var listeners = arrayClone(handler, len);
-    for (var i = 0; i < len; ++i)
-      listeners[i].call(self, arg1, arg2);
-  }
-}
-function emitThree(handler, isFn, self, arg1, arg2, arg3) {
-  if (isFn)
-    handler.call(self, arg1, arg2, arg3);
-  else {
-    var len = handler.length;
-    var listeners = arrayClone(handler, len);
-    for (var i = 0; i < len; ++i)
-      listeners[i].call(self, arg1, arg2, arg3);
-  }
-}
-
-function emitMany(handler, isFn, self, args) {
-  if (isFn)
-    handler.apply(self, args);
-  else {
-    var len = handler.length;
-    var listeners = arrayClone(handler, len);
-    for (var i = 0; i < len; ++i)
-      listeners[i].apply(self, args);
-  }
-}
-
-EventEmitter.prototype.emit = function emit(type) {
-  var er, handler, len, args, i, events;
-  var doError = (type === 'error');
-
-  events = this._events;
-  if (events)
-    doError = (doError && events.error == null);
-  else if (!doError)
-    return false;
-
-  // If there is no 'error' event listener then throw.
-  if (doError) {
-    if (arguments.length > 1)
-      er = arguments[1];
-    if (er instanceof Error) {
-      throw er; // Unhandled 'error' event
-    } else {
-      // At least give some kind of context to the user
-      var err = new Error('Unhandled "error" event. (' + er + ')');
-      err.context = er;
-      throw err;
-    }
-    return false;
-  }
-
-  handler = events[type];
-
-  if (!handler)
-    return false;
-
-  var isFn = typeof handler === 'function';
-  len = arguments.length;
-  switch (len) {
-      // fast cases
-    case 1:
-      emitNone(handler, isFn, this);
-      break;
-    case 2:
-      emitOne(handler, isFn, this, arguments[1]);
-      break;
-    case 3:
-      emitTwo(handler, isFn, this, arguments[1], arguments[2]);
-      break;
-    case 4:
-      emitThree(handler, isFn, this, arguments[1], arguments[2], arguments[3]);
-      break;
-      // slower
-    default:
-      args = new Array(len - 1);
-      for (i = 1; i < len; i++)
-        args[i - 1] = arguments[i];
-      emitMany(handler, isFn, this, args);
-  }
-
-  return true;
-};
-
-function _addListener(target, type, listener, prepend) {
-  var m;
-  var events;
-  var existing;
-
-  if (typeof listener !== 'function')
-    throw new TypeError('"listener" argument must be a function');
-
-  events = target._events;
-  if (!events) {
-    events = target._events = objectCreate(null);
-    target._eventsCount = 0;
-  } else {
-    // To avoid recursion in the case that type === "newListener"! Before
-    // adding it to the listeners, first emit "newListener".
-    if (events.newListener) {
-      target.emit('newListener', type,
-          listener.listener ? listener.listener : listener);
-
-      // Re-assign `events` because a newListener handler could have caused the
-      // this._events to be assigned to a new object
-      events = target._events;
-    }
-    existing = events[type];
-  }
-
-  if (!existing) {
-    // Optimize the case of one listener. Don't need the extra array object.
-    existing = events[type] = listener;
-    ++target._eventsCount;
-  } else {
-    if (typeof existing === 'function') {
-      // Adding the second element, need to change to array.
-      existing = events[type] =
-          prepend ? [listener, existing] : [existing, listener];
-    } else {
-      // If we've already got an array, just append.
-      if (prepend) {
-        existing.unshift(listener);
-      } else {
-        existing.push(listener);
-      }
-    }
-
-    // Check for listener leak
-    if (!existing.warned) {
-      m = $getMaxListeners(target);
-      if (m && m > 0 && existing.length > m) {
-        existing.warned = true;
-        var w = new Error('Possible EventEmitter memory leak detected. ' +
-            existing.length + ' "' + String(type) + '" listeners ' +
-            'added. Use emitter.setMaxListeners() to ' +
-            'increase limit.');
-        w.name = 'MaxListenersExceededWarning';
-        w.emitter = target;
-        w.type = type;
-        w.count = existing.length;
-        if (typeof console === 'object' && console.warn) {
-          console.warn('%s: %s', w.name, w.message);
-        }
-      }
-    }
-  }
-
-  return target;
-}
-
-EventEmitter.prototype.addListener = function addListener(type, listener) {
-  return _addListener(this, type, listener, false);
-};
-
-EventEmitter.prototype.on = EventEmitter.prototype.addListener;
-
-EventEmitter.prototype.prependListener =
-    function prependListener(type, listener) {
-      return _addListener(this, type, listener, true);
-    };
-
-function onceWrapper() {
-  if (!this.fired) {
-    this.target.removeListener(this.type, this.wrapFn);
-    this.fired = true;
-    switch (arguments.length) {
-      case 0:
-        return this.listener.call(this.target);
-      case 1:
-        return this.listener.call(this.target, arguments[0]);
-      case 2:
-        return this.listener.call(this.target, arguments[0], arguments[1]);
-      case 3:
-        return this.listener.call(this.target, arguments[0], arguments[1],
-            arguments[2]);
-      default:
-        var args = new Array(arguments.length);
-        for (var i = 0; i < args.length; ++i)
-          args[i] = arguments[i];
-        this.listener.apply(this.target, args);
-    }
-  }
-}
-
-function _onceWrap(target, type, listener) {
-  var state = { fired: false, wrapFn: undefined, target: target, type: type, listener: listener };
-  var wrapped = bind.call(onceWrapper, state);
-  wrapped.listener = listener;
-  state.wrapFn = wrapped;
-  return wrapped;
-}
-
-EventEmitter.prototype.once = function once(type, listener) {
-  if (typeof listener !== 'function')
-    throw new TypeError('"listener" argument must be a function');
-  this.on(type, _onceWrap(this, type, listener));
-  return this;
-};
-
-EventEmitter.prototype.prependOnceListener =
-    function prependOnceListener(type, listener) {
-      if (typeof listener !== 'function')
-        throw new TypeError('"listener" argument must be a function');
-      this.prependListener(type, _onceWrap(this, type, listener));
-      return this;
-    };
-
-// Emits a 'removeListener' event if and only if the listener was removed.
-EventEmitter.prototype.removeListener =
-    function removeListener(type, listener) {
-      var list, events, position, i, originalListener;
-
-      if (typeof listener !== 'function')
-        throw new TypeError('"listener" argument must be a function');
-
-      events = this._events;
-      if (!events)
-        return this;
-
-      list = events[type];
-      if (!list)
-        return this;
-
-      if (list === listener || list.listener === listener) {
-        if (--this._eventsCount === 0)
-          this._events = objectCreate(null);
-        else {
-          delete events[type];
-          if (events.removeListener)
-            this.emit('removeListener', type, list.listener || listener);
-        }
-      } else if (typeof list !== 'function') {
-        position = -1;
-
-        for (i = list.length - 1; i >= 0; i--) {
-          if (list[i] === listener || list[i].listener === listener) {
-            originalListener = list[i].listener;
-            position = i;
-            break;
-          }
-        }
-
-        if (position < 0)
-          return this;
-
-        if (position === 0)
-          list.shift();
-        else
-          spliceOne(list, position);
-
-        if (list.length === 1)
-          events[type] = list[0];
-
-        if (events.removeListener)
-          this.emit('removeListener', type, originalListener || listener);
-      }
-
-      return this;
-    };
-
-EventEmitter.prototype.removeAllListeners =
-    function removeAllListeners(type) {
-      var listeners, events, i;
-
-      events = this._events;
-      if (!events)
-        return this;
-
-      // not listening for removeListener, no need to emit
-      if (!events.removeListener) {
-        if (arguments.length === 0) {
-          this._events = objectCreate(null);
-          this._eventsCount = 0;
-        } else if (events[type]) {
-          if (--this._eventsCount === 0)
-            this._events = objectCreate(null);
-          else
-            delete events[type];
-        }
-        return this;
-      }
-
-      // emit removeListener for all listeners on all events
-      if (arguments.length === 0) {
-        var keys = objectKeys(events);
-        var key;
-        for (i = 0; i < keys.length; ++i) {
-          key = keys[i];
-          if (key === 'removeListener') continue;
-          this.removeAllListeners(key);
-        }
-        this.removeAllListeners('removeListener');
-        this._events = objectCreate(null);
-        this._eventsCount = 0;
-        return this;
-      }
-
-      listeners = events[type];
-
-      if (typeof listeners === 'function') {
-        this.removeListener(type, listeners);
-      } else if (listeners) {
-        // LIFO order
-        for (i = listeners.length - 1; i >= 0; i--) {
-          this.removeListener(type, listeners[i]);
-        }
-      }
-
-      return this;
-    };
-
-EventEmitter.prototype.listeners = function listeners(type) {
-  var evlistener;
-  var ret;
-  var events = this._events;
-
-  if (!events)
-    ret = [];
-  else {
-    evlistener = events[type];
-    if (!evlistener)
-      ret = [];
-    else if (typeof evlistener === 'function')
-      ret = [evlistener.listener || evlistener];
-    else
-      ret = unwrapListeners(evlistener);
-  }
-
-  return ret;
-};
-
-EventEmitter.listenerCount = function(emitter, type) {
-  if (typeof emitter.listenerCount === 'function') {
-    return emitter.listenerCount(type);
-  } else {
-    return listenerCount.call(emitter, type);
-  }
-};
-
-EventEmitter.prototype.listenerCount = listenerCount;
-function listenerCount(type) {
-  var events = this._events;
-
-  if (events) {
-    var evlistener = events[type];
-
-    if (typeof evlistener === 'function') {
-      return 1;
-    } else if (evlistener) {
-      return evlistener.length;
-    }
-  }
-
-  return 0;
-}
-
-EventEmitter.prototype.eventNames = function eventNames() {
-  return this._eventsCount > 0 ? Reflect.ownKeys(this._events) : [];
-};
-
-// About 1.5x faster than the two-arg version of Array#splice().
-function spliceOne(list, index) {
-  for (var i = index, k = i + 1, n = list.length; k < n; i += 1, k += 1)
-    list[i] = list[k];
-  list.pop();
-}
-
-function arrayClone(arr, n) {
-  var copy = new Array(n);
-  for (var i = 0; i < n; ++i)
-    copy[i] = arr[i];
-  return copy;
-}
-
-function unwrapListeners(arr) {
-  var ret = new Array(arr.length);
-  for (var i = 0; i < ret.length; ++i) {
-    ret[i] = arr[i].listener || arr[i];
-  }
-  return ret;
-}
-
-function objectCreatePolyfill(proto) {
-  var F = function() {};
-  F.prototype = proto;
-  return new F;
-}
-function objectKeysPolyfill(obj) {
-  var keys = [];
-  for (var k in obj) if (Object.prototype.hasOwnProperty.call(obj, k)) {
-    keys.push(k);
-  }
-  return k;
-}
-function functionBindPolyfill(context) {
-  var fn = this;
-  return function () {
-    return fn.apply(context, arguments);
-  };
-}
-
-},{}],4:[function(require,module,exports){
 
 var zip = require('zip');
 
@@ -1292,7 +768,7 @@ zip.workerScripts = {
 module.exports = zip;
 
 
-},{"zip":5}],5:[function(require,module,exports){
+},{"zip":4}],4:[function(require,module,exports){
 (function (global){
 ; var __browserify_shim_require__=require;(function browserifyShim(module, exports, require, define, browserify_shim__define__module__export__) {
 /*

@@ -2,7 +2,7 @@
 
 A simple drag-and-drop input using vanilla JavaScript.
 
-The library supports supports selection of multiple files, ZIP decoding, and fallback to `<input type=file multiple>` on older browsers. Size of the library is 45kb gzipped, which may be reduced in the future by making ZIP support optional.
+The library supports supports selection of multiple files, ZIP decoding, and fallback to `<input type=file multiple>` on older browsers. Size of the library is <45kb gzipped, which may be reduced in the future by making ZIP support optional.
 
 ## Installation
 
@@ -30,7 +30,7 @@ dropzone.on('drop', ({files}) => {
 
 ## API
 
-### SimpleDropzone( `dropEl`, `inputEl` ) : extends [EventEmitter](https://nodejs.org/api/events.html#events_class_eventemitter)
+### SimpleDropzone( `dropEl`, `inputEl` )
 
 Constructor takes two DOM elements, for the dropzone and file input.
 

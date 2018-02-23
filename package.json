@@ -31,19 +31,7 @@
     "concurrently": "^3.5.1",
     "gzip-size-cli": "^2.1.0",
     "serve": "^6.4.11",
-    "uglify-js": "^3.3.12",
+    "uglify-es": "^3.3.9",
     "watchify": "^3.10.0"
-  },
-  "browserify": {
-    "transform": [
-      [
-        "babelify",
-        {
-          "presets": [
-            "env"
-          ]
-        }
-      ]
-    ]
   }
 }

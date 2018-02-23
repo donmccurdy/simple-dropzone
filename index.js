@@ -1,4 +1,3 @@
-const EventEmitter = require('events');
 const zip = window.zip = require('zipjs-browserify');
 require('./lib/zip-fs');
 
@@ -8,17 +7,21 @@ const RE_GLTF = /\.(gltf|glb)$/;
  * Watches an element for file drops, parses to create a filemap hierarchy,
  * and emits the result.
  */
-class SimpleDropzone extends EventEmitter {
+class SimpleDropzone {
 
   /**
    * @param  {Element} el
    * @param  {Element} inputEl
    */
   constructor (el, inputEl) {
-    super();
-
     this.el = el;
     this.inputEl = inputEl;
+
+    this.listeners = {
+      drop: [],
+      dropstart: [],
+      droperror: []
+    };
 
     this._onDragover = this._onDragover.bind(this);
     this._onDrop = this._onDrop.bind(this);
@@ -27,6 +30,27 @@ class SimpleDropzone extends EventEmitter {
     el.addEventListener('dragover', this._onDragover, false);
     el.addEventListener('drop', this._onDrop, false);
     inputEl.addEventListener('change', this._onSelect);
+  }
+
+  /**
+   * @param  {string}   type
+   * @param  {Function} callback
+   * @return {SimpleDropzone}
+   */
+  on (type, callback) {
+    this.listeners[type].push(callback);
+    return this;
+  }
+
+  /**
+   * @param  {string} type
+   * @param  {Object} data
+   * @return {SimpleDropzone}
+   */
+  _emit (type, data) {
+    this.listeners[type]
+      .forEach((callback) => callback(data));
+    return this;
   }
 
   /**
@@ -40,10 +64,9 @@ class SimpleDropzone extends EventEmitter {
     el.removeEventListener(this._onDrop);
     inputEl.removeEventListener(this._onSelect);
 
-    this.removeAllListeners();
-
     delete this.el;
     delete this.inputEl;
+    delete this.listeners;
   }
 
   /**
@@ -53,7 +76,7 @@ class SimpleDropzone extends EventEmitter {
     e.stopPropagation();
     e.preventDefault();
 
-    this.emit('dropstart');
+    this._emit('dropstart');
 
     let entries;
     if (e.dataTransfer.items) {
@@ -65,7 +88,7 @@ class SimpleDropzone extends EventEmitter {
         this._loadZip(file);
         return;
       } else {
-        this._emitResult(new Map([[file.name, file]]));
+        this._emit('drop', {files: new Map([[file.name, file]])});
         return;
       }
     }
@@ -98,7 +121,7 @@ class SimpleDropzone extends EventEmitter {
     const files = [].slice.call(this.inputEl.files);
     const fileMap = new Map();
     files.forEach((file) => fileMap.set(file.name, file));
-    this._emitResult(fileMap);
+    this._emit('drop', {files: fileMap});
   }
 
   /**
@@ -111,7 +134,7 @@ class SimpleDropzone extends EventEmitter {
     const entry = entries.pop();
 
     if (!entry) {
-      this._emitResult(fileMap);
+      this._emit('drop', {files: fileMap});
       return;
     }
 
@@ -167,16 +190,9 @@ class SimpleDropzone extends EventEmitter {
     archive.importBlob(file, () => {
       traverse(archive.root);
       Promise.all(pending).then(() => {
-        this._emitResult(fileMap);
+        this._emit('drop', {files: fileMap});
       });
     });
-  }
-
-  /**
-   * @param {Map<string, File>} fileMap
-   */
-  _emitResult (files) {
-    this.emit('drop', {files: files});
   }
 
   /**
@@ -184,7 +200,7 @@ class SimpleDropzone extends EventEmitter {
    * @throws
    */
   _fail (message) {
-    this.emit('droperror', {message: message});
+    this._emit('droperror', {message: message});
   }
 }
 
