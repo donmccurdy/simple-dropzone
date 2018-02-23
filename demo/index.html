@@ -1,10 +1,32 @@
 <!DOCTYPE html>
 <html>
 <head>
-
+  <title>SimpleDropzone • Demo</title>
+  <style>
+html, body {
+  text-align: center;
+}
+.dropzone {
+  background: #f0f0f0;
+  border-radius: 4px;
+  padding: 2em;
+  display: flex;
+  justify-content: center;
+  max-width: 600px;
+  margin: 0 auto;
+}
+.list {
+  text-align: left;
+}
+  </style>
 </head>
 <body>
   <h1>SimpleDropzone</h1>
-  <p>Lorem ipsum...</p>
+  <div class="dropzone">
+    <span class="label">Drag in or select some files.</span>
+    <input type="file" multiple class="input">
+  </div>
+  <ul class="list"></ul>
+  <script src="bundle.js"></script>
 </body>
 </html>

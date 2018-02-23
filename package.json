@@ -1,10 +1,13 @@
 {
   "name": "simple-dropzone",
-  "version": "1.0.0",
+  "version": "0.4.0",
   "description": "A simple multi-file drag-and-drop input using vanilla JavaScript.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "budo demo/demo.js:bundle.js --live -d demo",
+    "dist": "browserify index.js -o dist/simple-dropzone.js && uglifyjs dist/simple-dropzone.js --mangle > dist/simple-dropzone.min.js",
+    "version": "npm run dist && git add -A dist",
+    "postversion": "git push && git push --tags && npm publish"
   },
   "keywords": [
     "files",
@@ -18,5 +21,29 @@
   "license": "MIT",
   "dependencies": {
     "zipjs-browserify": "^1.0.1"
+  },
+  "devDependencies": {
+    "babel-core": "^6.26.0",
+    "babel-preset-env": "^1.6.1",
+    "babelify": "^8.0.0",
+    "browserify": "^16.1.0",
+    "budo": "^11.1.7",
+    "concurrently": "^3.5.1",
+    "gzip-size-cli": "^2.1.0",
+    "serve": "^6.4.11",
+    "uglify-js": "^3.3.12",
+    "watchify": "^3.10.0"
+  },
+  "browserify": {
+    "transform": [
+      [
+        "babelify",
+        {
+          "presets": [
+            "env"
+          ]
+        }
+      ]
+    ]
   }
 }
