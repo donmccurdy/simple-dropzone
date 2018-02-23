@@ -3,6 +3,10 @@
   "version": "0.5.1",
   "description": "A simple multi-file drag-and-drop input using vanilla JavaScript.",
   "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/donmccurdy/simple-dropzone.git"
+  },
   "scripts": {
     "dev": "budo demo/demo.js:bundle.js --live -d demo",
     "dist": "browserify index.js -o dist/simple-dropzone.js && uglifyjs dist/simple-dropzone.js --mangle > dist/simple-dropzone.min.js",
