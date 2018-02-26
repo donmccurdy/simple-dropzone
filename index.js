@@ -1,8 +1,6 @@
 const zip = window.zip = require('zipjs-browserify');
 require('./lib/zip-fs');
 
-const RE_GLTF = /\.(gltf|glb)$/;
-
 /**
  * Watches an element for file drops, parses to create a filemap hierarchy,
  * and emits the result.
