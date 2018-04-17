@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "budo demo/demo.js:bundle.js --live -d demo",
-    "dist": "browserify index.js -o dist/simple-dropzone.js && uglifyjs dist/simple-dropzone.js --mangle > dist/simple-dropzone.min.js",
+    "dist": "browserify --standalone SimpleDropzone index.js -o dist/simple-dropzone.js && uglifyjs dist/simple-dropzone.js --mangle > dist/simple-dropzone.min.js",
     "version": "npm run dist && git add -A dist",
     "postversion": "git push && git push --tags && npm publish"
   },
