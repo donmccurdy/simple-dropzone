@@ -1,12 +1,12 @@
 # simple-dropzone
 
 [![Latest NPM release](https://img.shields.io/npm/v/simple-dropzone.svg)](https://www.npmjs.com/package/simple-dropzone)
-[![Minzipped size](https://badgen.net/bundlephobia/minzip/three-pathfinding)](https://bundlephobia.com/result?p=three-pathfinding)
+[![Minzipped size](https://badgen.net/bundlephobia/minzip/simple-dropzone)](https://bundlephobia.com/result?p=simple-dropzone)
 [![License](https://img.shields.io/npm/l/simple-dropzone.svg)](https://github.com/donmccurdy/simple-dropzone/blob/master/LICENSE)
 
 A simple drag-and-drop input using vanilla JavaScript.
 
-The library supports supports selection of multiple files, ZIP decoding, and fallback to `<input type=file multiple>` on older browsers. Size of the library is <45kb gzipped, which may be reduced in the future by making ZIP support optional.
+The library supports supports selection of multiple files, ZIP decoding, and fallback to `<input type=file multiple>` on older browsers.
 
 ## Installation
 
