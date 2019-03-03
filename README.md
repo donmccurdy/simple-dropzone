@@ -67,6 +67,6 @@ Destroys the instance and unbinds all events.
 
 | Event | Properties | Description |
 |---|---|---|
-| `drop` | `files : Map<string, File>` | New files added, from either drag-and-drop or selection. |
+| `drop` | `files : Map<string, File>, archive?: File` | New files added, from either drag-and-drop or selection. `archive` is provided if the files were extracted from a ZIP archive. |
 | `dropstart` |  — | Selection is in progress. Decompressing ZIP archives may take several seconds. |
 | `droperror` | `message : string` | Selection has failed. |
