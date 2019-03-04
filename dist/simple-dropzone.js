@@ -83,7 +83,7 @@ class SimpleDropzone {
         .map((item) => item.webkitGetAsEntry());
     } else if ((e.dataTransfer.files||[]).length === 1) {
       const file = e.dataTransfer.files[0];
-      if (file.type === 'application/zip') {
+      if (this._isZip(file)) {
         this._loadZip(file);
         return;
       } else {
@@ -116,8 +116,17 @@ class SimpleDropzone {
    * @param  {Event} e
    */
   _onSelect (e) {
+    this._emit('dropstart');
+
     // HTML file inputs do not seem to support folders, so assume this is a flat file list.
     const files = [].slice.call(this.inputEl.files);
+
+    // Automatically decompress a zip archive if it is the only file given.
+    if (files.length === 1 && this._isZip(files[0])) {
+      this._loadZip(files[0]);
+      return;
+    }
+
     const fileMap = new Map();
     files.forEach((file) => fileMap.set(file.name, file));
     this._emit('drop', {files: fileMap});
@@ -189,9 +198,17 @@ class SimpleDropzone {
     archive.importBlob(file, () => {
       traverse(archive.root);
       Promise.all(pending).then(() => {
-        this._emit('drop', {files: fileMap});
+        this._emit('drop', {files: fileMap, archive: file});
       });
     });
+  }
+
+  /**
+   * @param  {File} file
+   * @return {Boolean}
+   */
+  _isZip (file) {
+    return file.type === 'application/zip' || file.name.match(/\.zip$/);
   }
 
   /**

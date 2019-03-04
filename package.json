@@ -1,6 +1,6 @@
 {
   "name": "simple-dropzone",
-  "version": "0.5.3",
+  "version": "0.6.0",
   "description": "A simple multi-file drag-and-drop input using vanilla JavaScript.",
   "main": "index.js",
   "repository": {
