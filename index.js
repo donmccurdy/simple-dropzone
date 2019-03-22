@@ -1,5 +1,4 @@
-const zip = window.zip = require('zipjs-browserify');
-require('./lib/zip-fs');
+import ZipLoader from 'zip-loader';
 
 /**
  * Watches an element for file drops, parses to create a filemap hierarchy,
@@ -178,7 +177,6 @@ class SimpleDropzone {
   _loadZip (file) {
     const pending = [];
     const fileMap = new Map();
-    const archive = new zip.fs.FS();
 
     const traverse = (node) => {
       if (node.directory) {
@@ -194,11 +192,13 @@ class SimpleDropzone {
       }
     };
 
-    archive.importBlob(file, () => {
-      traverse(archive.root);
-      Promise.all(pending).then(() => {
-        this._emit('drop', {files: fileMap, archive: file});
+    ZipLoader.unzip(file).then((archive) => {
+      Object.keys(archive.files).forEach((path) => {
+        if (path.match(/\/$/)) return;
+        const fileName = path.replace(/^.*[\\\/]/, '');
+        fileMap.set(path, new File([archive.files[path].buffer], fileName));
       });
+      this._emit('drop', {files: fileMap, archive: file});
     });
   }
 
@@ -219,4 +219,4 @@ class SimpleDropzone {
   }
 }
 
-module.exports = SimpleDropzone;
+export { SimpleDropzone };

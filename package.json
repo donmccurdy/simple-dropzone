@@ -2,14 +2,16 @@
   "name": "simple-dropzone",
   "version": "0.6.0",
   "description": "A simple multi-file drag-and-drop input using vanilla JavaScript.",
-  "main": "index.js",
+  "source": "index.js",
+  "main": "dist/simple-dropzone.js",
+  "module": "dist/simple-dropzone.module.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/donmccurdy/simple-dropzone.git"
   },
   "scripts": {
-    "dev": "budo demo/demo.js:bundle.js --live -d demo",
-    "dist": "browserify --standalone SimpleDropzone index.js -o dist/simple-dropzone.js && uglifyjs dist/simple-dropzone.js --mangle > dist/simple-dropzone.min.js",
+    "dev": "concurrently \"microbundle watch --name SimpleDropzone --external none\" \"serve .\"",
+    "dist": "microbundle --name SimpleDropzone --external none",
     "version": "npm run dist && git add -A dist",
     "postversion": "git push && git push --tags && npm publish"
   },
@@ -24,18 +26,11 @@
   "author": "Don McCurdy <dm@donmccurdy.com>",
   "license": "MIT",
   "dependencies": {
-    "zipjs-browserify": "^1.0.1"
+    "zip-loader": "^1.1.0"
   },
   "devDependencies": {
-    "babel-core": "^6.26.0",
-    "babel-preset-env": "^1.6.1",
-    "babelify": "^8.0.0",
-    "browserify": "^16.1.0",
-    "budo": "^11.1.7",
-    "concurrently": "^3.5.1",
-    "gzip-size-cli": "^2.1.0",
-    "serve": "^6.4.11",
-    "uglify-es": "^3.3.9",
-    "watchify": "^3.10.0"
+    "concurrently": "^3.6.1",
+    "microbundle": "^0.11.0",
+    "serve": "^6.5.8"
   }
 }
