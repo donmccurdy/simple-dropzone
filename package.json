@@ -29,6 +29,7 @@
     "zip-loader": "^1.1.0"
   },
   "devDependencies": {
+    "acorn": "^6.1.1",
     "concurrently": "^3.6.1",
     "microbundle": "^0.11.0",
     "serve": "^6.5.8"
