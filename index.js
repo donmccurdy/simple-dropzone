@@ -1,4 +1,7 @@
-import ZipLoader from 'zip-loader';
+import zip from 'zip-js-esm';
+import { fs } from './lib/zip-fs.js';
+
+zip.useWebWorkers = false;
 
 /**
  * Watches an element for file drops, parses to create a filemap hierarchy,
@@ -67,6 +70,12 @@ class SimpleDropzone {
   }
 
   /**
+   * References (and horror):
+   * - https://developer.mozilla.org/en-US/docs/Web/API/DataTransfer/items
+   * - https://developer.mozilla.org/en-US/docs/Web/API/DataTransfer/files
+   * - https://code.flickr.net/2012/12/10/drag-n-drop/
+   * - https://stackoverflow.com/q/44842247/1314762
+   *
    * @param  {Event} e
    */
   _onDrop (e) {
@@ -75,30 +84,32 @@ class SimpleDropzone {
 
     this._emit('dropstart');
 
-    let entries;
-    if (e.dataTransfer.items) {
-      entries = [].slice.call(e.dataTransfer.items)
-        .map((item) => item.webkitGetAsEntry());
-    } else if ((e.dataTransfer.files||[]).length === 1) {
-      const file = e.dataTransfer.files[0];
-      if (this._isZip(file)) {
-        this._loadZip(file);
-        return;
-      } else {
-        this._emit('drop', {files: new Map([[file.name, file]])});
-        return;
-      }
-    }
+    const files = Array.from(e.dataTransfer.files || []);
+    const items = Array.from(e.dataTransfer.items || []);
 
-    if (!entries) {
+    if (files.length === 0 && items.length === 0) {
       this._fail('Required drag-and-drop APIs are not supported in this browser.');
+      return;
     }
 
-    if (entries.length === 1 && entries[0].name.match(/\.zip$/)) {
-      entries[0].file((file) => this._loadZip(file));
-    } else {
-      this._loadNextEntry(new Map(), entries);
+    // Prefer .items, which allow folder traversal if necessary.
+    if (items.length > 0) {
+      const entries = items.map((item) => item.webkitGetAsEntry());
+
+      if (entries[0].name.match(/\.zip$/)) {
+        this._loadZip(items[0].getAsFile());
+      } else {
+        this._loadNextEntry(new Map(), entries);
+      }
+
+      return;
     }
+
+    // Fall back to .files, since folders can't be traversed.
+    if (files.length === 1 && files[0].name.match(/\.zip$/)) {
+      this._loadZip(files[0]);
+    }
+    this._emit('drop', {files: new Map(files.map((file) => [file.name, file]))});
   }
 
   /**
@@ -177,6 +188,7 @@ class SimpleDropzone {
   _loadZip (file) {
     const pending = [];
     const fileMap = new Map();
+    const archive = new fs.FS();
 
     const traverse = (node) => {
       if (node.directory) {
@@ -192,13 +204,11 @@ class SimpleDropzone {
       }
     };
 
-    ZipLoader.unzip(file).then((archive) => {
-      Object.keys(archive.files).forEach((path) => {
-        if (path.match(/\/$/)) return;
-        const fileName = path.replace(/^.*[\\\/]/, '');
-        fileMap.set(path, new File([archive.files[path].buffer], fileName));
+    archive.importBlob(file, () => {
+      traverse(archive.root);
+      Promise.all(pending).then(() => {
+        this._emit('drop', {files: fileMap, archive: file});
       });
-      this._emit('drop', {files: fileMap, archive: file});
     });
   }
 
