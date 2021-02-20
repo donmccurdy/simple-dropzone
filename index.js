@@ -137,7 +137,7 @@ class SimpleDropzone {
     }
 
     const fileMap = new Map();
-    files.forEach((file) => fileMap.set(file.name, file));
+    files.forEach((file) => fileMap.set(file.webkitRelativePath || file.name, file));
     this._emit('drop', {files: fileMap});
   }
 
