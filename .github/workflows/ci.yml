@@ -1,0 +1,17 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - run: yarn install
+    - run: yarn dist
+    - run: sudo apt-get install xvfb
+    - run: xvfb-run --auto-servernum yarn test
+      env:
+        CI: true
