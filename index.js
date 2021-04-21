@@ -60,9 +60,9 @@ class SimpleDropzone {
     const el = this.el;
     const inputEl = this.inputEl;
 
-    el.removeEventListener(this._onDragover);
-    el.removeEventListener(this._onDrop);
-    inputEl.removeEventListener(this._onSelect);
+    el.removeEventListener('dragover', this._onDragover, false);
+    el.removeEventListener('drop', this._onDrop, false);
+    inputEl.removeEventListener('change', this._onSelect);
 
     delete this.el;
     delete this.inputEl;
