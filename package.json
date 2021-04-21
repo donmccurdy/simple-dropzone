@@ -12,6 +12,7 @@
   "scripts": {
     "dev": "concurrently \"microbundle watch --name SimpleDropzone --external none\" \"serve .\"",
     "dist": "microbundle --name SimpleDropzone --external none",
+    "test": "browserify test.js | tape-run | tap-spec",
     "version": "npm run dist",
     "postversion": "git push && git push --tags && npm publish"
   },
@@ -29,9 +30,13 @@
     "zip-js-esm": "^1.1.1"
   },
   "devDependencies": {
+    "browserify": "^17.0.0",
     "concurrently": "^5.2.0",
     "microbundle": "^0.13.0",
-    "serve": "^11.3.0"
+    "serve": "^11.3.0",
+    "tap-spec": "^5.0.0",
+    "tape": "^5.2.2",
+    "tape-run": "^9.0.0"
   },
   "files": [
     "dist/",
