@@ -33,6 +33,8 @@ dropzone.on('drop', ({files}) => {
 });
 ```
 
+Optionally, you may want to set [additional attributes](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/file#additional_attributes) to configure the file input element, e.g. to allow selection of multiple files.
+
 ## API
 
 ### SimpleDropzone( `dropEl`, `inputEl` )
