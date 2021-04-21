@@ -1,5 +1,5 @@
 import zip from 'zip-js-esm';
-import { fs } from './lib/zip-fs.js';
+import { fs } from './vendor/zip-fs.js';
 
 zip.useWebWorkers = false;
 
