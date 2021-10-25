@@ -31,8 +31,8 @@
   },
   "devDependencies": {
     "browserify": "17.0.0",
-    "concurrently": "6.2.1",
-    "microbundle": "0.13.3",
+    "concurrently": "6.3.0",
+    "microbundle": "0.14.1",
     "serve": "12.0.1",
     "tap-spec": "5.0.0",
     "tape": "5.3.1",
