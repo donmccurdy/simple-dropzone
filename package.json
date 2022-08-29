@@ -32,10 +32,10 @@
   "devDependencies": {
     "browserify": "17.0.0",
     "concurrently": "7.3.0",
-    "microbundle": "0.15.0",
+    "microbundle": "0.15.1",
     "serve": "13.0.4",
     "tap-spec": "5.0.0",
-    "tape": "5.5.3",
+    "tape": "5.6.0",
     "tape-run": "9.0.0"
   },
   "files": [
