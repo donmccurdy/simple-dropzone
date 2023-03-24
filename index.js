@@ -94,7 +94,7 @@ class SimpleDropzone {
 
     // Prefer .items, which allow folder traversal if necessary.
     if (items.length > 0) {
-      const entries = items.map((item) => item.webkitGetAsEntry());
+      const entries = items.map((item) => item.webkitGetAsEntry()).filter(entry => entry !== null);
 
       if (entries[0].name.match(/\.zip$/)) {
         this._loadZip(items[0].getAsFile());
