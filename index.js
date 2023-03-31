@@ -96,6 +96,7 @@ class SimpleDropzone {
     if (items.length > 0) {
       const entries = items.map((item) => item.webkitGetAsEntry()).filter(entry => entry !== null);
 
+      // donmccurdy/simple-dropzone#69
       if (entries.length > 0) {
         if (entries[0].name.match(/\.zip$/)) {
           this._loadZip(items[0].getAsFile());
