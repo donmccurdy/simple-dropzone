@@ -96,10 +96,12 @@ class SimpleDropzone {
     if (items.length > 0) {
       const entries = items.map((item) => item.webkitGetAsEntry()).filter(entry => entry !== null);
 
-      if (entries[0].name.match(/\.zip$/)) {
-        this._loadZip(items[0].getAsFile());
-      } else {
-        this._loadNextEntry(new Map(), entries);
+      if (entries.length > 0) {
+        if (entries[0].name.match(/\.zip$/)) {
+          this._loadZip(items[0].getAsFile());
+        } else {
+          this._loadNextEntry(new Map(), entries);
+        }
       }
 
       return;
