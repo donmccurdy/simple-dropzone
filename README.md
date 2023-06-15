@@ -1,7 +1,7 @@
 # simple-dropzone
 
 [![Latest NPM release](https://img.shields.io/npm/v/simple-dropzone.svg)](https://www.npmjs.com/package/simple-dropzone)
-[![Minzipped size](https://badgen.net/bundlephobia/minzip/simple-dropzone)](https://bundlephobia.com/result?p=simple-dropzone)
+[![npm bundle size](https://img.shields.io/bundlephobia/minzip/simple-dropzone)](https://bundlephobia.com/package/simple-dropzone)
 [![License](https://img.shields.io/npm/l/simple-dropzone.svg)](https://github.com/donmccurdy/simple-dropzone/blob/master/LICENSE)
 [![CI](https://github.com/donmccurdy/simple-dropzone/workflows/CI/badge.svg?branch=main&event=push)](https://github.com/donmccurdy/simple-dropzone/actions?query=workflow%3ACI)
 
