@@ -31,11 +31,11 @@
   },
   "devDependencies": {
     "browserify": "17.0.0",
-    "concurrently": "8.2.1",
+    "concurrently": "8.2.2",
     "microbundle": "0.15.1",
     "serve": "14.2.1",
     "tap-spec": "5.0.0",
-    "tape": "5.7.1",
+    "tape": "5.7.2",
     "tape-run": "11.0.0"
   },
   "files": [
