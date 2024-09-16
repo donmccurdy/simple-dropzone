@@ -35,7 +35,7 @@
     "microbundle": "0.15.1",
     "serve": "14.2.3",
     "tap-spec": "5.0.0",
-    "tape": "5.8.1",
+    "tape": "5.9.0",
     "tape-run": "11.0.0"
   },
   "files": [
