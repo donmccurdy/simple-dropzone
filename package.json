@@ -30,7 +30,7 @@
     "zip-js-esm": "^1.1.1"
   },
   "devDependencies": {
-    "browserify": "17.0.0",
+    "browserify": "17.0.1",
     "concurrently": "8.2.2",
     "microbundle": "0.15.1",
     "serve": "14.2.3",
